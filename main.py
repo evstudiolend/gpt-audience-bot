@@ -49,12 +49,16 @@ system_prompt = (
 )
 
 prompt_template = PromptTemplate(
-    input_variables=["question"],
-    template=system_prompt + "\n\nВопрос: {question}"
+    input_variables=["context", "question"],
+    template=system_prompt + "\n\nКонтекст: {context}\n\nВопрос: {question}"
 )
 
 llm = ChatOpenAI(model_name="gpt-4", temperature=0)
-qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever, chain_type_kwargs={"prompt": prompt_template})
+qa_chain = RetrievalQA.from_chain_type(
+    llm=llm,
+    retriever=retriever,
+    chain_type_kwargs={"prompt": prompt_template}
+)
 
 @app.post("/analyze")
 async def analyze(request: Request):
