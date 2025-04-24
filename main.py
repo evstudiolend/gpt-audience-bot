@@ -52,7 +52,12 @@ qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
 @app.post("/analyze")
 async def analyze(request: Request):
-    data = await request.json()
-    question = data.get("question", "")
-    response = qa_chain.run(question)
-    return {"answer": response}
+    try:
+        data = await request.json()
+        question = data.get("question", "")
+        if not question:
+            return {"error": "No question provided."}
+        response = qa_chain.run(question)
+        return {"answer": response}
+    except Exception as e:
+        return {"error": str(e)}
