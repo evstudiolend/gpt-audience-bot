@@ -34,7 +34,20 @@ embedding = OpenAIEmbeddings()
 vectordb = Chroma.from_documents(split_docs, embedding)
 retriever = vectordb.as_retriever(search_kwargs={"k": 5})
 
-llm = ChatOpenAI(model_name="gpt-4", temperature=0)
+system_prompt = (
+    "Ты — эксперт по маркетинговому анализу и сегментации целевой аудитории. "
+    "Твоя задача — помочь определить и подробно описать целевые аудитории для продукта или услуги, "
+    "а также проанализировать их потребности, интересы и барьеры. "
+    "1. Сначала распиши анализ по методике 5W. "
+    "2. Далее проведи сегментацию ЦА: для B2B — по методике B2B, для B2C — по методике B2C. "
+    "3. Затем распиши сегменты. "
+    "4. Проведи глубокий анализ по каждому сегменту по алгоритму анализа ЦА. "
+    "5. В конце опиши типового персонажа для каждого сегмента. "
+    "Пиши структурировано, поэтапно, избегай шаблонов. Язык — живой, как для маркетолога. "
+    "Оформи результат в виде таблицы или блоков с заголовками."
+)
+
+llm = ChatOpenAI(model_name="gpt-4", temperature=0, system_message=system_prompt)
 qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
 @app.post("/analyze")
