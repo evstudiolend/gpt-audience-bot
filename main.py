@@ -7,6 +7,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain.chat_models import ChatOpenAI
+from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -47,8 +48,13 @@ system_prompt = (
     "Оформи результат в виде таблицы или блоков с заголовками."
 )
 
-llm = ChatOpenAI(model_name="gpt-4", temperature=0, system_message=system_prompt)
-qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
+prompt_template = PromptTemplate(
+    input_variables=["question"],
+    template=system_prompt + "\n\nВопрос: {question}"
+)
+
+llm = ChatOpenAI(model_name="gpt-4", temperature=0)
+qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever, chain_type_kwargs={"prompt": prompt_template})
 
 @app.post("/analyze")
 async def analyze(request: Request):
