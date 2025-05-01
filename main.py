@@ -1,9 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-import uvicorn
 import os
 
 app = FastAPI()
@@ -14,14 +13,17 @@ class InputData(BaseModel):
 # Загружаем ключ API из переменной окружения
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-# Создаём LLMChain
-llm = ChatOpenAI(model_name="gpt-4", temperature=0, openai_api_key=openai_api_key)
+# Подключаем GPT-4 через LangChain
+llm = ChatOpenAI(model_name="gpt-4", temperature=0.7, openai_api_key=openai_api_key)
 
-prompt = f"""
-Ты — маркетолог-аналитик. Проанализируй целевую аудиторию продукта, опираясь на описание ниже.
+# Новый подробный промт
+prompt_template = PromptTemplate(
+    input_variables=["question"],
+    template="""
+Ты — маркетолог-аналитик. Проанализируй целевую аудиторию продукта, опираясь на описание ниже:
 
 🔹 Входные данные:
-\"\"\"{user_input}\"\"\"
+\"\"\"{question}\"\"\"
 
 🔹 Выполни глубокий структурированный анализ целевой аудитории по следующему алгоритму:
 
@@ -90,15 +92,15 @@ B2B (если применимо):
 - Каналы и точки контакта
 - Как выделиться и завоевать доверие
 
-Оформи ответ чётко, по пунктам, как в маркетинговом отчёте. Не выдумывай лишнего — анализируй.
+Оформи ответ логично, структурно, без воды, как в маркетинговом отчёте.
 """
+)
 
-chain = LLMChain(llm=llm, prompt=prompt)
+# Создаём цепочку
+chain = LLMChain(prompt=prompt_template, llm=llm)
 
-@app.post("/analyze")
+# Обработчик запроса
+@app.post("/")
 async def analyze(data: InputData):
-    response = chain.run(data.question)
-    return {"result": response}
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=80)
+    result = chain.run(question=data.question)
+    return {"answer": result}
