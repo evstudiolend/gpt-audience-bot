@@ -13,7 +13,7 @@ class InputData(BaseModel):
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-llm = ChatOpenAI(model_name="gpt-4", temperature=0.4, openai_api_key=openai_api_key)
+llm = ChatOpenAI(model_name="gpt-4o", temperature=0.4, openai_api_key=openai_api_key)
 
 prompt_template = PromptTemplate(
     input_variables=["question"],
