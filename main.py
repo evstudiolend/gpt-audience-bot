@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
@@ -8,13 +9,25 @@ import os
 
 app = FastAPI()
 
+# 🔐 Разрешаем CORS для всех доменов (можно указать только домен Tilda)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Или укажи точный домен Tilda, например: ["https://project12345.tilda.ws"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class InputData(BaseModel):
     question: str
 
+# 🔑 Получаем ключ из переменной окружения
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
+# 🤖 Используем модель GPT-4o
 llm = ChatOpenAI(model_name="gpt-4o", temperature=0.4, openai_api_key=openai_api_key)
 
+# 📋 Промт
 prompt_template = PromptTemplate(
     input_variables=["question"],
     template="""
@@ -101,12 +114,15 @@ prompt_template = PromptTemplate(
 """
 )
 
+# 🧠 Подключаем промт к модели
 chain = LLMChain(llm=llm, prompt=prompt_template)
 
+# 🚪 Эндпоинт, к которому будет обращаться HTML-форма на Tilda
 @app.post("/analyze")
 async def analyze(data: InputData):
     response = chain.run(question=data.question)
     return {"answer": response}
 
+# 🚀 Запуск локально (не нужен на Render)
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=10000)
