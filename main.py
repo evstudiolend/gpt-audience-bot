@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from langchain.chat_models import ChatOpenAI
 import uvicorn
 import os
+import requests
 
 app = FastAPI()
 
@@ -19,9 +20,15 @@ class StepRequest(BaseModel):
     question: str
     step: int
 
+class CheckSubRequest(BaseModel):
+    user_id: int
+
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     raise ValueError("OPENAI_API_KEY не задан в переменных окружения")
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHANNEL = os.getenv("TELEGRAM_CHANNEL")
 
 # GPT-4o (основная премиум-модель)
 llm_gpt4o = ChatOpenAI(model_name="gpt-4o", temperature=0.4, openai_api_key=openai_api_key)
@@ -126,6 +133,25 @@ async def generate_analysis(data: StepRequest, llm):
 
     response = llm.predict(step_prompt)
     return {"step": data.step, "result": response}
+
+@app.post("/check-subscription")
+async def check_subscription(data: CheckSubRequest):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getChatMember"
+    params = {
+        "chat_id": TELEGRAM_CHANNEL,
+        "user_id": data.user_id
+    }
+
+    try:
+        response = requests.get(url, params=params).json()
+        status = response.get("result", {}).get("status", "")
+
+        if status in ["member", "administrator", "creator"]:
+            return {"subscribed": True}
+        else:
+            return {"subscribed": False}
+    except Exception as e:
+        return {"subscribed": False, "error": str(e)}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
