@@ -7,7 +7,6 @@ import os
 
 app = FastAPI()
 
-# 🔐 CORS (можно ограничить конкретным доменом Tilda)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,18 +15,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class InputData(BaseModel):
+class StepRequest(BaseModel):
     question: str
+    step: int
 
-# 🔑 Ключ OpenAI
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     raise ValueError("OPENAI_API_KEY не задан в переменных окружения")
 
-# 🤖 GPT-4o модель
 llm = ChatOpenAI(model_name="gpt-4o", temperature=0.4, openai_api_key=openai_api_key)
 
-# 🔢 Полные многошаговые запросы
 steps = [
     """1. **Общая характеристика продукта и ниши**
 - УТП, позиционирование, премиальность, сегмент рынка""",
@@ -86,14 +83,15 @@ steps = [
 - Как обойти конкурентов"""
 ]
 
-# 🚪 Эндпоинт
-@app.post("/analyze")
-async def analyze(data: InputData):
+@app.post("/analyze-step")
+async def analyze_step(data: StepRequest):
     description = data.question
-    all_steps_output = "⏳ GPT начал многошаговый анализ..."
+    step_index = data.step - 1
 
-    for i, step in enumerate(steps):
-        step_prompt = f"""Ты — маркетинговый аналитик и бренд-стратег.
+    if step_index < 0 or step_index >= len(steps):
+        return {"error": "Неверный номер шага"}
+
+    step_prompt = f"""Ты — маркетинговый аналитик и бренд-стратег.
 
 🌟 Твоя задача — не просто выдать шаблон, а — понять суть продукта и помочь автору взглянуть на него глазами клиента.
 
@@ -110,18 +108,13 @@ async def analyze(data: InputData):
 
 🚫 Не выдумывай данные — строй выводы логично на основе описания продукта.
 
-### Шаг {i + 1}:
-{step}
+### Шаг {data.step}:
+{steps[step_index]}
 """
-        response = llm.predict(step_prompt)
-        all_steps_output += f"\n\n▶️ Шаг {i + 1}:\n{response}"
 
-    all_steps_output += "\n\n✅ Анализ завершён."
-    return {"answer": all_steps_output}
+    response = llm.predict(step_prompt)
+    return {"step": data.step, "result": response}
 
-# 🚀 Локальный запуск
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
-
