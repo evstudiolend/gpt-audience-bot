@@ -23,7 +23,8 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     raise ValueError("OPENAI_API_KEY не задан в переменных окружения")
 
-llm = ChatOpenAI(model_name="gpt-4o", temperature=0.4, openai_api_key=openai_api_key)
+# GPT-4o (основная премиум-модель)
+llm_gpt4o = ChatOpenAI(model_name="gpt-4o", temperature=0.4, openai_api_key=openai_api_key)
 
 steps = [
     """1. **Общая характеристика продукта и ниши**
@@ -83,8 +84,19 @@ steps = [
 - Как обойти конкурентов"""
 ]
 
+# 🎯 Платный маршрут — GPT-4o
 @app.post("/analyze-step")
 async def analyze_step(data: StepRequest):
+    return await generate_analysis(data, llm_gpt4o)
+
+# 🎯 Бесплатный маршрут — GPT-3.5
+@app.post("/analyze-step-free")
+async def analyze_step_free(data: StepRequest):
+    llm_gpt35 = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.4, openai_api_key=openai_api_key)
+    return await generate_analysis(data, llm_gpt35)
+
+# 🔁 Общая логика анализа
+async def generate_analysis(data: StepRequest, llm):
     description = data.question
     step_index = data.step - 1
 
