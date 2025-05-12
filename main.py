@@ -101,6 +101,25 @@ async def analyze_step(data: StepRequest):
 async def analyze_step_free(data: StepRequest):
     llm_gpt35 = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.4, openai_api_key=openai_api_key)
     return await generate_analysis(data, llm_gpt35)
+    
+@app.post("/generate-landing")
+async def generate_landing(data: dict):
+    import openai
+
+    with open("prompt_landing.txt", "r", encoding="utf-8") as f:
+        prompt_template = f.read()
+
+    for key, value in data.items():
+        placeholder = f"{{{{{key}}}}}"
+        prompt_template = prompt_template.replace(placeholder, str(value or ""))
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4o",  # ✅ используем GPT-4o
+        messages=[{"role": "user", "content": prompt_template}],
+        temperature=0.7
+    )
+
+    return {"result": response["choices"][0]["message"]["content"]}
 
 # 🔁 Общая логика анализа
 async def generate_analysis(data: StepRequest, llm):
