@@ -109,21 +109,29 @@ async def analyze_step_free(data: StepRequest):
 @app.post("/generate-landing")
 async def generate_landing(data: dict):
     import openai
+    import os
 
-    with open("prompt_landing.txt", "r", encoding="utf-8") as f:
-        prompt_template = f.read()
+    if not os.path.exists("prompt_landing.txt"):
+        return {"error": "⚠️ prompt_landing.txt не найден на сервере. Проверь структуру проекта."}
 
-    for key, value in data.items():
-        placeholder = f"{{{{{key}}}}}"
-        prompt_template = prompt_template.replace(placeholder, str(value or ""))
+    try:
+        with open("prompt_landing.txt", "r", encoding="utf-8") as f:
+            prompt_template = f.read()
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4o",  # ✅ используем GPT-4o
-        messages=[{"role": "user", "content": prompt_template}],
-        temperature=0.7
-    )
+        for key, value in data.items():
+            placeholder = f"{{{{{key}}}}}"
+            prompt_template = prompt_template.replace(placeholder, str(value or ""))
 
-    return {"result": response["choices"][0]["message"]["content"]}
+        response = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt_template}],
+            temperature=0.7
+        )
+
+        return {"result": response["choices"][0]["message"]["content"]}
+    except Exception as e:
+        return {"error": f"❌ Ошибка при генерации лендинга: {str(e)}"}
+
 
 # 🔁 Общая логика анализа
 async def generate_analysis(data: StepRequest, llm):
