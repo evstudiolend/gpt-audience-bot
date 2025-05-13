@@ -8,12 +8,18 @@ import requests
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.studiolend.ru"],
+    allow_origins=[
+        "https://www.studiolend.ru",  # Домен Tilda
+        "http://localhost:3000",      # На случай локального теста
+        "https://studiolend.ru"       # Без www — на всякий
+    ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
 class StepRequest(BaseModel):
