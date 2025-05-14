@@ -10,16 +10,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://www.studiolend.ru",  # Домен Tilda
-        "http://localhost:3000",      # На случай локального теста
-        "https://studiolend.ru"       # Без www — на всякий
-        "https://evstudiolend.github.io",            # ← ваш GitHub Pages
-        "https://evstudiolend.github.io/landing-generator"  # ← если нужен точный путь
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
 class StepRequest(BaseModel):
