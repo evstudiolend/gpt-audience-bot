@@ -105,11 +105,62 @@ async def analyze_step(data: StepRequest):
 async def analyze_step_free(data: StepRequest):
     llm_gpt35 = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.4, openai_api_key=openai_api_key)
     return await generate_analysis(data, llm_gpt35)
+
+class LandingStepRequest(BaseModel):
+    data: dict
+    step: int
+
+landing_steps = [
+    "Первый экран: Заголовок, подзаголовок, буллиты, CTA",
+    "Проблема → Решение: словами клиента",
+    "Как это работает / Преимущества",
+    "Социальные доказательства: отзывы, кейсы, факты",
+    "Кейсы: истории клиентов",
+    "Подробности оффера и бонусы",
+    "Финальный экран: CTA + резюме"
+]
+
+@app.post("/generate-landing-step")
+async def generate_landing_step(request: LandingStepRequest):
+    step_index = request.step - 1
+    if step_index < 0 or step_index >= len(landing_steps):
+        return {"error": "Неверный номер шага"}
+
+    prompt = build_landing_prompt(request.data, request.step, landing_steps[step_index])
+    response = llm_gpt4o.predict(prompt)
+    return {"step": request.step, "result": response}
+
+def build_landing_prompt(data, step_num, block_title):
+    return f"""
+Ты — маркетолог и копирайтер с сильным опытом в продажах. Напиши текст для **блока {step_num}: {block_title}** продающего лендинга. Структура AIDA. Язык клиента. Только конкретика, никакой воды.
+
+📌 Условия:
+— Уникальные заголовки и подзаголовки с цифрами, выгодами, фактами
+— Выделяй главное: УТП, оффер, сильные смыслы
+— Не повторяй клише и общие слова («надежно», «быстро», «высокое качество»)
+— Примени результаты анализа ЦА и конкурентов
+
+📦 Данные:
+Продукт: {data.get("product_name", "")}
+Описание: {data.get("product_description", "")}
+Компания: {data.get("company_info", "")}
+ЦА: {data.get("audience_analysis", "")}
+Конкуренты: {data.get("competitors_info", "")}
+Преимущества: {data.get("unique_selling_points", "")}
+Оффер: {data.get("main_offer", "")}
+Бонусы: {data.get("bonuses", "")}
+Кейсы: {data.get("case_studies", "")}
+Отзывы: {data.get("testimonials", "")}
+Цель: {data.get("goal", "")}
+Стиль: {data.get("style", "")}
+
+🎯 Напиши текст только для блока {step_num}. Делай текст ярким, логичным, цепляющим.
+"""
     
 @app.post("/generate-landing")
 async def generate_landing(data: dict):
     import openai
-    import os
+    openai.api_key = os.getenv("OPENAI_API_KEY")
 
     if not os.path.exists("prompt_landing.txt"):
         return {"error": "⚠️ prompt_landing.txt не найден на сервере. Проверь структуру проекта."}
@@ -131,7 +182,6 @@ async def generate_landing(data: dict):
         return {"result": response["choices"][0]["message"]["content"]}
     except Exception as e:
         return {"error": f"❌ Ошибка при генерации лендинга: {str(e)}"}
-
 
 # 🔁 Общая логика анализа
 async def generate_analysis(data: StepRequest, llm):
