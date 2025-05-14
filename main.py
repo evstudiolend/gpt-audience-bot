@@ -160,7 +160,9 @@ def build_landing_prompt(data, step_num, block_title):
 @app.post("/generate-landing")
 async def generate_landing(data: dict):
     import openai
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    from openai import OpenAI
+
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     if not os.path.exists("prompt_landing.txt"):
         return {"error": "⚠️ prompt_landing.txt не найден на сервере. Проверь структуру проекта."}
@@ -173,13 +175,13 @@ async def generate_landing(data: dict):
             placeholder = f"{{{{{key}}}}}"
             prompt_template = prompt_template.replace(placeholder, str(value or ""))
 
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt_template}],
             temperature=0.7
         )
 
-        return {"result": response["choices"][0]["message"]["content"]}
+        return {"result": response.choices[0].message.content}
     except Exception as e:
         return {"error": f"❌ Ошибка при генерации лендинга: {str(e)}"}
 
